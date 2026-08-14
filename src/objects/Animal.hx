@@ -720,7 +720,7 @@ class Animal extends FlxSprite {
 	inline function dist(a:FlxSprite, b:FlxSprite):Float {
 		var dx = a.x - b.x;
 		var dy = a.y - b.y;
-		return dx * dx + dy * dy;
+		return Math.sqrt(dx * dx + dy * dy);
 	}
 
 	function getStats():String {

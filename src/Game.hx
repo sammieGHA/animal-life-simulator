@@ -156,6 +156,9 @@ class Game extends FlxState
 		if (selectedAnimal != null && selectedAnimal.alive) {
 			animalStatText.text = selectedAnimal.getStats();
 			gameCamera.follow(selectedAnimal, LOCKON, .5);
+			#if debug
+			trace(selectedAnimal.priority);
+			#end
 		} else {
 			selectedAnimal = null;
 			gameCamera.follow(null);
