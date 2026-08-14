@@ -200,6 +200,8 @@ class Game extends FlxState
 		gameCamera.scroll.y += dy * CAM_SPEED * elapsed;
 		audioListener.x = gameCamera.scroll.x + gameCamera.width / (2 * gameCamera.zoom);
 		audioListener.y = gameCamera.scroll.y + gameCamera.height / (2 * gameCamera.zoom);
+
+		gameCamera.zoom = Math.max(.25, gameCamera.zoom);
 	}
 
 	function trySelectAnimal()
