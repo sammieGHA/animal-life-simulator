@@ -187,24 +187,16 @@ class Game extends FlxState
 		}
 
 		var wheel = FlxG.mouse.wheel;
-		if (wheel != 0)
-		{
-			gameCamera.zoom += wheel * ZOOM_SPEED;
-		}
+		if (wheel != 0) gameCamera.zoom += wheel * ZOOM_SPEED;
+		gameCamera.zoom = Math.max(.25, gameCamera.zoom);
 
-		if (FlxG.keys.justPressed.E) {
-			FlxG.timeScale += .25;
-		}
-		if (FlxG.keys.justPressed.Q && FlxG.timeScale >= 0) {
-			FlxG.timeScale -= .25;
-		}
+		if (FlxG.keys.justPressed.E) FlxG.timeScale += .25;
+		if (FlxG.keys.justPressed.Q && FlxG.timeScale >= 0) FlxG.timeScale -= .25;
 
 		gameCamera.scroll.x += dx * CAM_SPEED * elapsed;
 		gameCamera.scroll.y += dy * CAM_SPEED * elapsed;
 		audioListener.x = gameCamera.scroll.x + gameCamera.width / (2 * gameCamera.zoom);
 		audioListener.y = gameCamera.scroll.y + gameCamera.height / (2 * gameCamera.zoom);
-
-		gameCamera.zoom = Math.max(.25, gameCamera.zoom);
 	}
 
 	function trySelectAnimal()

@@ -108,6 +108,9 @@ class Predator extends Animal {
         thirst -= FlxG.random.float(5, 12);
         rebound();
 
+		var sound = FlxG.sound.play('res/eat${FlxG.random.int(1, 4)}.wav');
+		sound.proximity(this.x, this.y, Game.instance.audioListener, 800, true);
+
         prey.die();
         preyTarget = null;
         searchingForFood = false;

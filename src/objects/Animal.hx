@@ -15,6 +15,7 @@ typedef Genes = {
 	var hungerDrainMult:Float;
 	var sizeMult:Float;
 	var sightRangeMult:Float;
+	var reactionTimeMult:Float;
 }
 
 enum Priority {
@@ -77,7 +78,14 @@ class Animal extends FlxSprite {
 	var threatCheckCounter:Float = 0;
 	var hitboxUpdate:Float = 0;
 
-	static inline var FLEE_TRIGGER_RANGE:Float = 150;
+	var fleeMinDurationTimer:Float = 0;
+
+	var pendingPriority:Priority = NOTHING;
+	var priorityChangeTimer:Float = 0;
+
+	static inline var BASE_REACTION_TIME:Float = .5;
+	static inline var FLEE_MIN_DURATION:Float = 1.0;
+	static inline var FLEE_TRIGGER_RANGE:Float = 350;
 	static inline var FLEE_SAFE_RANGE:Float = 300;
 	static inline var DRINK_DISTANCE:Float = 25;
 	static inline var RECHECK_INTERVAL:Float = 1.5;
@@ -132,10 +140,11 @@ class Animal extends FlxSprite {
 		rebound();
 
 		if (!isAdult) {
-			age += dt * .5;
+			age += dt * .2;
 
 			var growth = FlxMath.bound(age / ADULT_AGE, 0, 1);
-			scale.set(BABY_SCALE + (1 - BABY_SCALE) * growth, BABY_SCALE + (1 - BABY_SCALE) * growth);
+			var targetScale = BABY_SCALE + (genes.sizeMult - BABY_SCALE) * growth;
+			scale.set(targetScale, targetScale);
 			
 			hitboxUpdate += dt;
 			if (hitboxUpdate >= .1) {
@@ -206,26 +215,44 @@ class Animal extends FlxSprite {
 			return;
 
 		if (!isPredator && !isStupid) {
+			if (isBeingHunted && priority != FLEE) {
+				var hunter = findNearbyThreat();
+				if (hunter != null) {
+					priority = FLEE; // no reaction delay because free is more of a reflex
+					pendingPriority = FLEE;
+					fleeTarget = hunter;
+					fleeMinDurationTimer = FLEE_MIN_DURATION;
+					return;
+				}
+			}
+
 			threatCheckCounter += dt;
 			if (threatCheckCounter >= .15) {
 				threatCheckCounter = 0;
 				var nearbyPred = findNearbyThreat();
 				if (nearbyPred != null && !nearbyPred.isSleeping && nearbyPred.priority == FOOD) {
+					if (priority != FLEE)
+						fleeMinDurationTimer = FLEE_MIN_DURATION;
 					priority = FLEE;
+					pendingPriority = FLEE;
 					fleeTarget = nearbyPred;
 					return;
 				}
 
 				if (priority == FLEE) {
-					priority = NOTHING;
-					fleeTarget = null;
+					fleeMinDurationTimer -= .15;
+					if (fleeMinDurationTimer <= 0) {
+						priority = NOTHING;
+						pendingPriority =NOTHING;
+						fleeTarget = null;
+					}
 				}
 			} else if (priority == FLEE) {
 				return;
 			}
 		}
 
-		if (priority == FLEE) fleeTarget = null;
+		if (priority == FLEE) return;
 
 		var isCommitted = (priority == WATER && waterTarget != null)
 			|| (priority == FOOD && foodTarget != null)
@@ -236,16 +263,40 @@ class Animal extends FlxSprite {
 		if (isCommitted && !isCritical)
 			return;
 
+		var desired:Priority;
+
 		if (energy <= 15 && Game.curDay == NIGHT)
-			priority = ENERGY;
+			desired = ENERGY;
 		else if (hunger >= levelToSeekFood)
-			priority = FOOD;
+			desired = FOOD;
 		else if (thirst <= levelToSeekWater)
-			priority = WATER;
+			desired = WATER;
 		else if (isAdult && mate_level >= MATE_THRES && energy >= 35)
-			priority = MATE;
+			desired = MATE;
 		else
-			priority = NOTHING;
+			desired = NOTHING;
+
+		if (isCritical) {
+			priority = desired;
+			pendingPriority = desired;
+			priorityChangeTimer = 0;
+			return;
+		}
+
+		if (desired == priority) {
+			pendingPriority = priority;
+			priorityChangeTimer = 0; 
+			return;
+		}
+
+		if (desired != pendingPriority) {
+			pendingPriority = desired;
+			priorityChangeTimer = BASE_REACTION_TIME * genes.reactionTimeMult * FlxG.random.float(.7, 1.3);
+			return;
+		}
+
+		priorityChangeTimer -= dt;
+		if (priorityChangeTimer <= 0) priority = desired;
 	}
 
 	function pursueFlee(dt:Float) {
@@ -269,7 +320,7 @@ class Animal extends FlxSprite {
 		var dy = y - fleeTarget.y;
 		var ang = Math.atan2(dy, dx);
 
-		velocity.set(wanderSpeed * 1.3, 0);
+		velocity.set(wanderSpeed * 1.4, 0);
 		velocity.rotateByRadians(ang);
 	}
 
@@ -317,6 +368,7 @@ class Animal extends FlxSprite {
 				seekFood();
 			case FLEE:
 				wanderTimer.cancel();
+				maxVelocity.set(wanderSpeed * 1.4, wanderSpeed * 1.4);
 		}
 	}
 
@@ -326,7 +378,8 @@ class Animal extends FlxSprite {
 			thirstDrainMult: FlxG.random.float(.8, 1.8),
 			hungerDrainMult: FlxG.random.float(.8, 1.8),
 			sizeMult:        FlxG.random.float(.8, 1.8),
-			sightRangeMult:  FlxG.random.float(.8, 1.8)
+			sightRangeMult:  FlxG.random.float(.8, 1.8),
+			reactionTimeMult:FlxG.random.float(.3, 3.8)
 		};
 	}
 
@@ -336,7 +389,8 @@ class Animal extends FlxSprite {
 			thirstDrainMult: mutateGene((a.thirstDrainMult + b.thirstDrainMult) / 2, FlxG.random.int(-1, 1)),
 			hungerDrainMult: mutateGene((a.hungerDrainMult + b.hungerDrainMult) / 2, FlxG.random.int(-1, 1)),
 			sizeMult:        mutateGene((a.sizeMult + b.sizeMult) / 2, FlxG.random.int(-1, 1)),
-			sightRangeMult:  mutateGene((a.sightRangeMult + b.sightRangeMult) / 2, FlxG.random.int(-1, 1))
+			sightRangeMult:  mutateGene((a.sightRangeMult + b.sightRangeMult) / 2, FlxG.random.int(-1, 1)),
+			reactionTimeMult:mutateGene((a.reactionTimeMult + b.reactionTimeMult) / 2, FlxG.random.int(-1, 1))
 		};
 	}
 
