@@ -66,6 +66,11 @@ class MainMenu extends FlxState {
     }
 
     override function update(dt:Float) {
+		animalAmount = Std.int(Math.max(0, animalAmount));
+        predatorAmount = Std.int(Math.max(0, predatorAmount));
+        plantAmount = Std.int(Math.max(0, plantAmount));
+        pondAmount = Std.int(Math.max(0, pondAmount));
+		
         if (FlxG.keys.anyJustPressed([SPACE, ENTER])) {
             FlxG.switchState(() -> new Game(animalAmount, predatorAmount, plantAmount, pondAmount));
         }
