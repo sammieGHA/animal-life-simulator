@@ -34,7 +34,6 @@ class Animal extends FlxSprite {
 	var mate_level:Float = 0;
 
 	var priority:Priority;
-	var stats:String;
 
 	var wanderAngle:Float = 0;
 	var wanderTimer:FlxTimer = new FlxTimer();
@@ -72,6 +71,8 @@ class Animal extends FlxSprite {
 	var fleeRecheckTimer:Float = 0;
 
 	var isStupid:Bool = false;
+	var threatCheckCounter:Float = 0;
+	var hitboxUpdate:Float = 0;
 
 	static inline var FLEE_TRIGGER_RANGE:Float = 150;
 	static inline var FLEE_SAFE_RANGE:Float = 300;
@@ -119,14 +120,6 @@ class Animal extends FlxSprite {
 	}
 
 	override function update(dt:Float) {
-		stats = 'H: ${Std.int(hunger)} | T: ${Std.int(thirst)} | E: ${Std.int(energy)} | ML: ${Std.int(mate_level)} | PRI: $priority | NAME: $name\n'
-			+ 'AGE: ${Std.int(age)} | ADULT: $isAdult | GEN: $generation\n'
-			+ 'ThirstDrainMult: ${FlxMath.roundDecimal(genes.thirstDrainMult, 2)} | '
-			+ 'WanderSpeedMult: ${FlxMath.roundDecimal(genes.wanderSpeedMult, 2)}\n'
-			+ 'SizeMult: ${FlxMath.roundDecimal(genes.sizeMult, 2)} | '
-			+ 'HungerDrainMult: ${FlxMath.roundDecimal(genes.hungerDrainMult, 2)}\n'
-			+ 'SightRangeMult: ${FlxMath.roundDecimal(genes.sightRangeMult, 2)}';
-		
 		hunger += dt * FlxG.random.float(0.8, 1.2) * genes.hungerDrainMult;
 		thirst -= dt * FlxG.random.float(0.8, Game.curDay == DAY ? 2.1 : 1.2) * genes.thirstDrainMult;
 		rebound();
@@ -136,7 +129,12 @@ class Animal extends FlxSprite {
 
 			var growth = FlxMath.bound(age / ADULT_AGE, 0, 1);
 			scale.set(BABY_SCALE + (1 - BABY_SCALE) * growth, BABY_SCALE + (1 - BABY_SCALE) * growth);
-			updateHitbox();
+			
+			hitboxUpdate += dt;
+			if (hitboxUpdate >= .1) {
+				hitboxUpdate = 0;
+				updateHitbox();
+			}
 
 			if (age >= ADULT_AGE) {
 				isAdult = true;
@@ -146,7 +144,7 @@ class Animal extends FlxSprite {
 		}
 
 		var previousPriority = priority;
-		updatePriority();
+		updatePriority(dt);
 
 		if (priority != previousPriority)
 			onPriorityChanged(previousPriority, priority);
@@ -195,15 +193,21 @@ class Animal extends FlxSprite {
 		super.update(dt);
 	}
 
-	function updatePriority() {
+	function updatePriority(dt:Float) {
 		if (isMating || isSleeping)
 			return;
 
 		if (!isPredator && !isStupid) {
-			var nearbyPred = findNearbyThreat();
-			if (nearbyPred != null && !nearbyPred.isSleeping && nearbyPred.priority == FOOD) {
-				priority = FLEE;
-				fleeTarget = nearbyPred;
+			threatCheckCounter += dt;
+			if (threatCheckCounter >= .3) {
+				threatCheckCounter = 0;
+				var nearbyPred = findNearbyThreat();
+				if (nearbyPred != null && !nearbyPred.isSleeping && nearbyPred.priority == FOOD) {
+					priority = FLEE;
+					fleeTarget = nearbyPred;
+					return;
+				}
+			} else if (priority == FLEE) {
 				return;
 			}
 		}
@@ -239,7 +243,7 @@ class Animal extends FlxSprite {
 			return;
 		}
 
-		var dist = FlxMath.distanceBetween(this, fleeTarget);
+		var dist = dist(this, fleeTarget);
 
 		if (dist >= FLEE_SAFE_RANGE) {
 			fleeTarget = null;
@@ -261,7 +265,7 @@ class Animal extends FlxSprite {
 			for (p in Game.animals.members) {
 				if (p == null || !p.alive || !p.isPredator) continue;
 
-				var d = FlxMath.distanceBetween(this, p);
+				var d = dist(this, p);
 				if (d <= FLEE_TRIGGER_RANGE * 1.5)
 					return p;
 			}
@@ -269,7 +273,7 @@ class Animal extends FlxSprite {
 
 		for (p in Game.animals.members) {
 			if (p == null || !p.alive || !p.isPredator) continue;
-			var d = FlxMath.distanceBetween(this, p);
+			var d = dist(this, p);
 			if (d <= FLEE_TRIGGER_RANGE) return p;
 		}
 
@@ -365,7 +369,7 @@ class Animal extends FlxSprite {
 			if (!other.isAdult || other.mate_level < MATE_THRES || other.isMating || other.isPredator != isPredator)
 				continue;
 
-			var d = FlxMath.distanceBetween(this, other);
+			var d = dist(this, other);
 			if (d < nearestDist) {
 				nearestDist = d;
 				nearest = other;
@@ -398,7 +402,7 @@ class Animal extends FlxSprite {
 			checkForCloserMate();
 		}
 
-		var dist = FlxMath.distanceBetween(this, mateTarget);
+		var dist = dist(this, mateTarget);
 
 		if (dist <= MATE_DISTANCE) {
 			mateWith(mateTarget);
@@ -417,7 +421,7 @@ class Animal extends FlxSprite {
 		if (mateTarget == null)
 			return;
 
-		var currentDist = FlxMath.distanceBetween(this, mateTarget);
+		var currentDist = dist(this, mateTarget);
 		var nearest:Animal = null;
 		var nearestDist:Float = currentDist;
 
@@ -427,7 +431,7 @@ class Animal extends FlxSprite {
 			if (!other.isAdult || other.mate_level < MATE_THRES || other.isMating || other.isPredator != isPredator)
 				continue;
 
-			var d = FlxMath.distanceBetween(this, other);
+			var d = dist(this, other);
 			if (d < nearestDist) {
 				nearestDist = d;
 				nearest = other;
@@ -474,7 +478,7 @@ class Animal extends FlxSprite {
 			if (p == null || !p.alive || !p.isRipe)
 				continue;
 
-			var d = FlxMath.distanceBetween(this, p);
+			var d = dist(this, p);
 			if (d < nearestDist) {
 				nearestDist = d;
 				nearest = p;
@@ -510,7 +514,7 @@ class Animal extends FlxSprite {
 			checkForCloserFood();
 		}
 
-		var dist = FlxMath.distanceBetween(this, foodTarget);
+		var dist = dist(this, foodTarget);
 
 		if (dist <= EAT_DISTANCE) {
 			eat(foodTarget);
@@ -706,5 +710,21 @@ class Animal extends FlxSprite {
 		var sound = FlxG.sound.play('res/die${FlxG.random.int(1, 4)}.ogg');
 		sound.proximity(x, y, Game.instance.audioListener, 800, true);
 		kill();
+	}
+
+	inline function dist(a:FlxSprite, b:FlxSprite):Float {
+		var dx = a.x - b.x;
+		var dy = a.y - b.y;
+		return dx * dx + dy * dy;
+	}
+
+	function getStats():String {
+		return 'H: ${Std.int(hunger)} | T: ${Std.int(thirst)} | E: ${Std.int(energy)} | ML: ${Std.int(mate_level)} | PRI: $priority | NAME: $name\n'
+			+ 'AGE: ${Std.int(age)} | ADULT: $isAdult | GEN: $generation\n'
+			+ 'ThirstDrainMult: ${FlxMath.roundDecimal(genes.thirstDrainMult, 2)} | '
+			+ 'WanderSpeedMult: ${FlxMath.roundDecimal(genes.wanderSpeedMult, 2)}\n'
+			+ 'SizeMult: ${FlxMath.roundDecimal(genes.sizeMult, 2)} | '
+			+ 'HungerDrainMult: ${FlxMath.roundDecimal(genes.hungerDrainMult, 2)}\n'
+			+ 'SightRangeMult: ${FlxMath.roundDecimal(genes.sightRangeMult, 2)}';
 	}
 }
