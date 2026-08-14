@@ -1,4 +1,4 @@
-package objects;
+package objects.animals;
 
 import flixel.FlxG;
 import flixel.math.FlxMath;
@@ -14,6 +14,7 @@ class Predator extends Animal {
 	function new(x:Float, y:Float, ?inheritedGenes:Genes, ?parentGeneration:Int, ?parentAName:String, ?parentBName:String, ?age:Float) {
 		super(x, y, inheritedGenes, parentGeneration, parentAName, parentBName, age);
 		isPredator = true;
+        species = "wolf";
 		loadGraphic('res/wolf.png');
 	}
 

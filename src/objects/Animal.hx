@@ -8,6 +8,7 @@ import flixel.math.FlxPoint;
 import flixel.util.FlxColor;
 import flixel.util.FlxTimer;
 import objects.*;
+import objects.animals.*;
 
 typedef Genes = {
 	var wanderSpeedMult:Float;
@@ -49,6 +50,7 @@ class Animal extends FlxSprite {
 	var searchingForMate:Bool = false;
 
 	var name:String;
+	var species:String = "animal";
 
 	var foodTarget:Plant;
 	var searchingForFood:Bool = false;
@@ -114,11 +116,6 @@ class Animal extends FlxSprite {
 		isStupid = FlxG.random.bool(2);
 		#if !debug MATE_THRES = FlxG.random.float(65, 99); #end
 
-		/**
-		 * TODO: make it so that sheep and cow are two different animals
-		 * 		and they eat different plants
-		 */
-		loadGraphic('res/${FlxG.random.getObject(['sheep', 'cow'])}.png');
 		drag.set(200, 200);
 		maxVelocity.set(wanderSpeed, wanderSpeed);
 		wander();
@@ -433,7 +430,7 @@ class Animal extends FlxSprite {
 		for (other in Game.animals.members) {
 			if (other == null || other == this || !other.alive)
 				continue;
-			if (!other.isAdult || other.mate_level < MATE_THRES || other.isMating || other.isPredator != isPredator)
+			if (!other.isAdult || other.mate_level < MATE_THRES || other.isMating || other.isPredator != isPredator || other.species != species)
 				continue;
 
 			var d = dist(this, other);
@@ -495,7 +492,7 @@ class Animal extends FlxSprite {
 		for (other in Game.animals.members) {
 			if (other == null || other == this || other == mateTarget || !other.alive)
 				continue;
-			if (!other.isAdult || other.mate_level < MATE_THRES || other.isMating || other.isPredator != isPredator)
+			if (!other.isAdult || other.mate_level < MATE_THRES || other.isMating || other.isPredator != isPredator || other.species != species)
 				continue;
 
 			var d = dist(this, other);
@@ -521,10 +518,17 @@ class Animal extends FlxSprite {
 
 		var childGeneration = Std.int(Math.max(generation, other.generation));
 		var childGenes = inheritGenes(genes, other.genes);
-		if (isPredator && other.isPredator)
-			Game.animals.add(new objects.Predator(babyX, babyY, childGenes, childGeneration, name, other.name));
-		else
-			Game.animals.add(new Animal(babyX, babyY, childGenes, childGeneration, name, other.name));
+
+		var baby:Animal = switch (species) {
+			case "wolf":  new Predator(babyX, babyY, childGenes, childGeneration, name, other.name);
+			case "sheep": new Sheep(babyX, babyY, childGenes, childGeneration, name, other.name);
+			case "cow":   new Cow(babyX, babyY, childGenes, childGeneration, name, other.name);
+			default: 
+				trace('weird ass child just got made. what are these guys making?');
+				new Cow(babyX, babyY, childGenes, childGeneration, name, other.name);
+		}
+
+		Game.animals.add(baby);
 
 		energy -= FlxG.random.float(20, 50);
 		var sound = FlxG.sound.play('res/birth.ogg');

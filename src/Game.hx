@@ -10,6 +10,7 @@ import flixel.util.FlxColor;
 import flixel.util.FlxSpriteUtil;
 import flixel.util.FlxTimer;
 import objects.*;
+import objects.animals.*;
 
 enum Day {
 	DAY;
@@ -102,15 +103,17 @@ class Game extends FlxState
 		animals = new FlxTypedGroup<Animal>();
 		add(animals);
 
-		for (i in 0...animalAmount)
-		{
-			var animal = new Animal(FlxG.random.float(-1000, 1000), FlxG.random.float(-1000, 1000), null, null, null, null, 45.0);
+		for (i in 0...animalAmount) {
+			var isSheep = FlxG.random.bool(50);
+			var animal:Animal = isSheep 
+				? new Sheep(FlxG.random.float(-1000, 1000), FlxG.random.float(-1000, 1000), null, null, null, null, 45.0)
+				: new Cow(FlxG.random.float(-1000, 1000), FlxG.random.float(-1000, 1000), null, null, null, null, 45.0);
 			animal.camera = gameCamera;
 			animals.add(animal);
 		}
 
 		for (i in 0...predatorAmount) {
-			var pred = new objects.Predator(FlxG.random.float(-1000, 1000), FlxG.random.float(-1000, 1000), null, null, null, null, 45.0);
+			var pred = new objects.animals.Predator(FlxG.random.float(-1000, 1000), FlxG.random.float(-1000, 1000), null, null, null, null, 45.0);
 			pred.camera = gameCamera;
 			animals.add(pred);
 		}
