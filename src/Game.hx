@@ -12,6 +12,11 @@ import flixel.util.FlxTimer;
 import objects.*;
 import objects.animals.*;
 
+typedef AnimalSpawner = {
+	var weight:Float;
+	var create:(x:Float, y:Float) -> Animal;
+}
+
 enum Day {
 	DAY;
 	NIGHT;
@@ -59,6 +64,11 @@ class Game extends FlxState
 	public static var instance:Game;
 	public var audioListener:FlxSprite;
 
+	var animalSpawners:Array<AnimalSpawner> = [
+		{ weight: 1, create: (x, y) -> new Cow(x, y, null, null, null, null, 45.0) },
+		{ weight: 1, create: (x, y) -> new Sheep(x, y, null, null, null, null, 45.0) },
+	];
+
 	public function new(animalAmount:Int, predatorAmount:Int, plantAmount:Int, pondAmount:Int) {
 		super();
 
@@ -104,10 +114,8 @@ class Game extends FlxState
 		add(animals);
 
 		for (i in 0...animalAmount) {
-			var isSheep = FlxG.random.bool(50);
-			var animal:Animal = isSheep 
-				? new Sheep(FlxG.random.float(-1000, 1000), FlxG.random.float(-1000, 1000), null, null, null, null, 45.0)
-				: new Cow(FlxG.random.float(-1000, 1000), FlxG.random.float(-1000, 1000), null, null, null, null, 45.0);
+			var spawner = pickRandomSpawner(animalSpawners);
+			var animal = spawner.create(FlxG.random.float(-1000, 1000), FlxG.random.float(-1000, 1000));
 			animal.camera = gameCamera;
 			animals.add(animal);
 		}
@@ -226,5 +234,22 @@ class Game extends FlxState
 			gameCamera.bgColor = curDay == DAY ? DAY_COLOR : NIGHT_COLOR;
 			startDayCycle();
 		});
+	}
+
+	function pickRandomSpawner(spawners:Array<AnimalSpawner>):AnimalSpawner {
+		var totalWeight = 0.0;
+		for (s in spawners)
+			totalWeight += s.weight;
+
+		var roll = FlxG.random.float(0, totalWeight);
+		var cumulative = 0.0;
+
+		for (s in spawners) {
+			cumulative += s.weight;
+			if (roll <= cumulative)
+				return s;
+		}
+
+		return spawners[spawners.length - 1];
 	}
 }
