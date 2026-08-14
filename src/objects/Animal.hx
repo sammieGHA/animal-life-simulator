@@ -26,6 +26,9 @@ enum Priority {
 	FLEE;
 }
 
+/**
+ * TODO: Replace "DISTANCE" vars with `FlxG.overlap(a, b);`
+ */
 @:publicFields
 class Animal extends FlxSprite {
 	var hunger:Float = 0;
@@ -100,10 +103,14 @@ class Animal extends FlxSprite {
 		levelToSeekFood = FlxG.random.float(30, 60);
 		levelToSeekWater = FlxG.random.float(10, 40);
 		wanderSpeed = FlxG.random.float(100, 140) * genes.wanderSpeedMult;
-		isStupid = FlxG.random.bool(15);
+		isStupid = FlxG.random.bool(2);
 		#if !debug MATE_THRES = FlxG.random.float(65, 99); #end
 
-		loadGraphic('res/animal.png');
+		/**
+		 * TODO: make it so that sheep and cow are two different animals
+		 * 		and they eat different plants
+		 */
+		loadGraphic('res/${FlxG.random.getObject(['sheep', 'cow'])}.png');
 		drag.set(200, 200);
 		maxVelocity.set(wanderSpeed, wanderSpeed);
 		wander();
@@ -194,12 +201,13 @@ class Animal extends FlxSprite {
 	}
 
 	function updatePriority(dt:Float) {
+		#if debug if (priority == FOOD && isPredator) trace('is huntin'); #end
 		if (isMating || isSleeping)
 			return;
 
 		if (!isPredator && !isStupid) {
 			threatCheckCounter += dt;
-			if (threatCheckCounter >= .3) {
+			if (threatCheckCounter >= .15) {
 				threatCheckCounter = 0;
 				var nearbyPred = findNearbyThreat();
 				if (nearbyPred != null && !nearbyPred.isSleeping && nearbyPred.priority == FOOD) {

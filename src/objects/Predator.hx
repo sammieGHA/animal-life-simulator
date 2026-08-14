@@ -14,7 +14,7 @@ class Predator extends Animal {
 	function new(x:Float, y:Float, ?inheritedGenes:Genes, ?parentGeneration:Int, ?parentAName:String, ?parentBName:String, ?age:Float) {
 		super(x, y, inheritedGenes, parentGeneration, parentAName, parentBName, age);
 		isPredator = true;
-		loadGraphic('res/predator.png');
+		loadGraphic('res/wolf.png');
 	}
 
     override function seekFood() {
