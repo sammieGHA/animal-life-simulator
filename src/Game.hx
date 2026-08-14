@@ -1,0 +1,230 @@
+package;
+
+import flixel.FlxCamera;
+import flixel.FlxG;
+import flixel.FlxState;
+import flixel.group.FlxGroup.FlxTypedGroup;
+import flixel.sound.FlxSound;
+import flixel.text.FlxText;
+import flixel.util.FlxColor;
+import flixel.util.FlxSpriteUtil;
+import flixel.util.FlxTimer;
+import objects.*;
+
+enum Day {
+	DAY;
+	NIGHT;
+}
+
+class Game extends FlxState
+{
+	var gameCamera:FlxCamera;
+	var hudCamera:FlxCamera;
+
+	var animalCText:FlxText;
+	var animalStatText:FlxText;
+
+	public static var animals:FlxTypedGroup<Animal>;
+	public static var plants:FlxTypedGroup<Plant>;
+	public static var ponds:FlxTypedGroup<Pond>;
+
+	var selectedAnimal:Animal;
+
+	public static var animalCount = 0;
+	public static var curDay:Day = DAY;
+	var dayTimer:FlxTimer = new FlxTimer();
+
+	static inline var DAY_LENGTH:Float = 60;
+	static inline var NIGHT_LENGTH:Float = 40;
+
+	static inline var CAM_SPEED:Float = 290;
+	static inline var ZOOM_SPEED:Float = .2;
+
+	var averageTimer:FlxTimer = new FlxTimer();
+
+	static inline var DAY_COLOR:FlxColor = 0xff4CAF50;
+	static inline var NIGHT_COLOR:FlxColor = 0xff1B3A1F;
+
+	var sightRangeIndicator:FlxSprite;
+
+	/**
+	 * these are fallbacks dont edit them
+	 */
+	var animalAmount:Int = 600;
+	var predatorAmount:Int = 30;
+	var plantAmount:Int = 800;
+	var pondAmount:Int = 5;
+
+	public static var instance:Game;
+	public var audioListener:FlxSprite;
+
+	public function new(animalAmount:Int, predatorAmount:Int, plantAmount:Int, pondAmount:Int) {
+		super();
+
+		animalCount = 0;
+		curDay = DAY;
+		FlxG.timeScale = 1;
+
+		this.animalAmount = animalAmount;
+		this.predatorAmount = predatorAmount;
+		this.plantAmount = plantAmount;
+		this.pondAmount = pondAmount;
+	}
+
+	override public function create()
+	{
+		super.create();
+		instance = this;
+		FlxG.sound.music.stop();
+
+		audioListener = new FlxSprite();
+		audioListener.makeGraphic(1, 1);
+		audioListener.visible = false;
+		add(audioListener);
+
+		gameCamera = new FlxCamera(0, 0, FlxG.width, FlxG.height, 1);
+		FlxG.cameras.add(gameCamera);
+		gameCamera.bgColor = curDay == DAY ? DAY_COLOR : NIGHT_COLOR;
+
+		hudCamera = new FlxCamera(0, 0, FlxG.width, FlxG.height, 1);
+		hudCamera.bgColor = FlxColor.TRANSPARENT;
+		FlxG.cameras.add(hudCamera, false);
+
+		ponds = new FlxTypedGroup<Pond>();
+		add(ponds);
+
+		for (i in 0...pondAmount) {
+			var pond = new Pond(FlxG.random.float(-1000, 1000), FlxG.random.float(-1000, 1000));
+			pond.camera = gameCamera;
+			ponds.add(pond);
+		}
+
+		animals = new FlxTypedGroup<Animal>();
+		add(animals);
+
+		for (i in 0...animalAmount)
+		{
+			var animal = new Animal(FlxG.random.float(-1000, 1000), FlxG.random.float(-1000, 1000), null, null, null, null, 45.0);
+			animal.camera = gameCamera;
+			animals.add(animal);
+		}
+
+		for (i in 0...predatorAmount) {
+			var pred = new objects.Predator(FlxG.random.float(-1000, 1000), FlxG.random.float(-1000, 1000), null, null, null, null, 45.0);
+			pred.camera = gameCamera;
+			animals.add(pred);
+		}
+
+		sightRangeIndicator = new FlxSprite();
+		sightRangeIndicator.camera = gameCamera;
+		sightRangeIndicator.visible = false;
+		add(sightRangeIndicator);
+
+		plants = new FlxTypedGroup<Plant>();
+		add(plants);
+
+		for (i in 0...plantAmount) {
+			var plant = new Plant(FlxG.random.float(-2000, 2000), FlxG.random.float(-2000, 2000));
+			plant.camera = gameCamera;
+			plants.add(plant);
+		}
+
+		animalCText = new FlxText(10, 10, 0, "", 24);
+		animalCText.scrollFactor.set(0, 0);
+		animalCText.camera = hudCamera;
+		add(animalCText);
+
+		animalStatText = new FlxText(10, 42, 0, "", 20);
+		animalStatText.scrollFactor.set(0, 0);
+		animalStatText.camera = hudCamera;
+		add(animalStatText);
+
+		animalStatText.font = 'res/pirkkala.ttf';
+		animalCText.font = 'res/pirkkala.ttf';
+
+		startDayCycle();
+	}
+
+	override public function update(elapsed:Float)
+	{
+		super.update(elapsed);
+
+		animalCText.text = 'Animals: $animalCount | Time: $curDay | Timescale: ${FlxG.timeScale}';
+		if (FlxG.mouse.justPressed)
+			trySelectAnimal();
+		
+		if (selectedAnimal != null && selectedAnimal.alive) {
+			animalStatText.text = selectedAnimal.stats;
+			gameCamera.follow(selectedAnimal, LOCKON, .5);
+		} else {
+			selectedAnimal = null;
+			gameCamera.follow(null);
+			animalStatText.text = "No animal selected";
+			sightRangeIndicator.visible = false;
+		}
+
+		var dx:Float = 0;
+		var dy:Float = 0;
+
+		if (FlxG.keys.anyPressed([LEFT, A]))
+			dx -= 2;
+		if (FlxG.keys.anyPressed([RIGHT, D]))
+			dx += 2;
+		if (FlxG.keys.anyPressed([UP, W]))
+			dy -= 2;
+		if (FlxG.keys.anyPressed([DOWN, S]))
+			dy += 2;
+		if (FlxG.keys.anyPressed([SHIFT, CONTROL])) {
+			dx *= 2;
+			dy *= 2;
+		}
+
+		if (FlxG.keys.anyJustPressed([ESCAPE, BACKSPACE])) {
+			FlxG.switchState(() -> new MainMenu());
+		}
+
+		var wheel = FlxG.mouse.wheel;
+		if (wheel != 0)
+		{
+			gameCamera.zoom += wheel * ZOOM_SPEED;
+		}
+
+		if (FlxG.keys.justPressed.E) {
+			FlxG.timeScale += .25;
+		}
+		if (FlxG.keys.justPressed.Q && FlxG.timeScale >= 0) {
+			FlxG.timeScale -= .25;
+		}
+
+		gameCamera.scroll.x += dx * CAM_SPEED * elapsed;
+		gameCamera.scroll.y += dy * CAM_SPEED * elapsed;
+		audioListener.x = gameCamera.scroll.x + gameCamera.width / (2 * gameCamera.zoom);
+		audioListener.y = gameCamera.scroll.y + gameCamera.height / (2 * gameCamera.zoom);
+	}
+
+	function trySelectAnimal()
+	{
+		var worldPos = FlxG.mouse.getWorldPosition(gameCamera);
+		var found:Animal = null;
+
+		animals.forEachAlive(function(a:Animal)
+		{
+			if (found == null && a.overlapsPoint(worldPos, true, gameCamera))
+			{
+				found = a;
+			}
+		});
+
+		worldPos.put();
+		selectedAnimal = found;
+	}
+
+	function startDayCycle() {
+		var duration = curDay == DAY ? DAY_LENGTH:NIGHT_LENGTH;
+		dayTimer.start(duration, function(_) {
+			curDay = curDay == DAY ? NIGHT:DAY;
+			gameCamera.bgColor = curDay == DAY ? DAY_COLOR : NIGHT_COLOR;
+			startDayCycle();
+		});
+	}
+}
