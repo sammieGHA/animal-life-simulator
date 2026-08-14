@@ -93,7 +93,7 @@ class Animal extends FlxSprite {
 		super(x, y);
 		Game.animalCount++;
 		priority = NOTHING;
-		name = (parentAName != null && parentBName != null) ? combineNames(parentAName, parentBName) : Random.string(8);
+		name = (parentAName != null && parentBName != null) ? combineNames(parentAName, parentBName) : Random.string(FlxG.random.int(2, 8));
 		this.age = age == null ? this.age : age;
 		genes = inheritedGenes != null ? inheritedGenes : randomGenes();
 		generation = parentGeneration != null ? parentGeneration + 1 : 1;
@@ -206,6 +206,11 @@ class Animal extends FlxSprite {
 					priority = FLEE;
 					fleeTarget = nearbyPred;
 					return;
+				}
+
+				if (priority == FLEE) {
+					priority = NOTHING;
+					fleeTarget = null;
 				}
 			} else if (priority == FLEE) {
 				return;
