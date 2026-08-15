@@ -523,6 +523,7 @@ class Animal extends FlxSprite {
 			case "wolf":  new Predator(babyX, babyY, childGenes, childGeneration, name, other.name);
 			case "sheep": new Sheep(babyX, babyY, childGenes, childGeneration, name, other.name);
 			case "cow":   new Cow(babyX, babyY, childGenes, childGeneration, name, other.name);
+			case "horse": new Horse(babyX, babyY, childGenes, childGeneration, name, other.name);
 			default: 
 				trace('weird ass child just got made. what are these guys making?');
 				new Cow(babyX, babyY, childGenes, childGeneration, name, other.name);

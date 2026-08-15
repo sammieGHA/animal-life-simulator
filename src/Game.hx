@@ -6,6 +6,8 @@ import flixel.FlxState;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.sound.FlxSound;
 import flixel.text.FlxText;
+import flixel.tweens.FlxEase;
+import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
 import flixel.util.FlxSpriteUtil;
 import flixel.util.FlxTimer;
@@ -50,6 +52,11 @@ class Game extends FlxState
 
 	static inline var DAY_COLOR:FlxColor = 0xff4CAF50;
 	static inline var NIGHT_COLOR:FlxColor = 0xff1B3A1F;
+	var nightOverlay:FlxSprite;
+	var overlayCamera:FlxCamera;
+
+	static inline var NIGHT_OVERLAY_ALPHA:Float = .75;
+	static inline var OVERLAY_FADE_DURATION:Float = 10;
 
 	var sightRangeIndicator:FlxSprite;
 
@@ -67,6 +74,7 @@ class Game extends FlxState
 	var animalSpawners:Array<AnimalSpawner> = [
 		{ weight: 1, create: (x, y) -> new Cow(x, y, null, null, null, null, 45.0) },
 		{ weight: 1, create: (x, y) -> new Sheep(x, y, null, null, null, null, 45.0) },
+		{ weight: .50, create: (x, y) -> new Horse(x, y, null, null, null, null, 45.0) }
 	];
 
 	public function new(animalAmount:Int, predatorAmount:Int, plantAmount:Int, pondAmount:Int) {
@@ -97,9 +105,20 @@ class Game extends FlxState
 		FlxG.cameras.add(gameCamera);
 		gameCamera.bgColor = curDay == DAY ? DAY_COLOR : NIGHT_COLOR;
 
+		overlayCamera = new FlxCamera(0, 0, FlxG.width, FlxG.height, 1);
+		overlayCamera.bgColor = FlxColor.TRANSPARENT;
+		FlxG.cameras.add(overlayCamera, false);
+
 		hudCamera = new FlxCamera(0, 0, FlxG.width, FlxG.height, 1);
 		hudCamera.bgColor = FlxColor.TRANSPARENT;
 		FlxG.cameras.add(hudCamera, false);
+
+		nightOverlay = new FlxSprite();
+		nightOverlay.makeGraphic(FlxG.width, FlxG.height, 0xFF0a0a2e);
+		nightOverlay.scrollFactor.set(0, 0);
+		nightOverlay.camera = overlayCamera;
+		nightOverlay.alpha = curDay == NIGHT ? NIGHT_OVERLAY_ALPHA : 0;
+		add(nightOverlay);
 
 		ponds = new FlxTypedGroup<Pond>();
 		add(ponds);
@@ -201,6 +220,7 @@ class Game extends FlxState
 		if (wheel != 0) gameCamera.zoom += wheel * ZOOM_SPEED;
 		gameCamera.zoom = Math.max(.25, gameCamera.zoom);
 
+		FlxG.timeScale = Math.max(0, FlxG.timeScale);
 		if (FlxG.keys.justPressed.E) FlxG.timeScale += .25;
 		if (FlxG.keys.justPressed.Q && FlxG.timeScale >= 0) FlxG.timeScale -= .25;
 
@@ -228,10 +248,13 @@ class Game extends FlxState
 	}
 
 	function startDayCycle() {
-		var duration = curDay == DAY ? DAY_LENGTH:NIGHT_LENGTH;
+		var duration = curDay == DAY ? DAY_LENGTH : NIGHT_LENGTH;
 		dayTimer.start(duration, function(_) {
-			curDay = curDay == DAY ? NIGHT:DAY;
-			gameCamera.bgColor = curDay == DAY ? DAY_COLOR : NIGHT_COLOR;
+			curDay = curDay == DAY ? NIGHT : DAY;
+
+			var targetAlpha = curDay == NIGHT ? NIGHT_OVERLAY_ALPHA : 0;
+			FlxTween.tween(nightOverlay, {alpha: targetAlpha}, OVERLAY_FADE_DURATION, {ease: FlxEase.quadInOut});
+
 			startDayCycle();
 		});
 	}
