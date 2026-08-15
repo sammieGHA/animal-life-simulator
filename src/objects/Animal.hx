@@ -614,7 +614,7 @@ class Animal extends FlxSprite {
 		if (foodTarget == null)
 			return;
 
-		var currentDist = FlxMath.distanceBetween(this, foodTarget);
+		var currentDist = dist(this, foodTarget);
 		var nearest:Plant = null;
 		var nearestDist:Float = currentDist;
 
@@ -622,7 +622,7 @@ class Animal extends FlxSprite {
 			if (p == null || !p.alive || !p.isRipe || p == foodTarget)
 				continue;
 
-			var d = FlxMath.distanceBetween(this, p);
+			var d = dist(this, p);
 			if (d < nearestDist) {
 				nearestDist = d;
 				nearest = p;
@@ -645,7 +645,7 @@ class Animal extends FlxSprite {
 			if (p == null || !p.alive)
 				continue;
 
-			var d = FlxMath.distanceBetween(this, p);
+			var d = dist(this, p);
 			if (d < nearestDist) {
 				nearestDist = d;
 				nearest = p;
@@ -681,26 +681,23 @@ class Animal extends FlxSprite {
 			checkForCloserWater();
 		}
 
-		var dist = FlxMath.distanceBetween(this, waterTarget);
-
-		if (dist <= DRINK_DISTANCE) {
+		if (dist(this, waterTarget) <= DRINK_DISTANCE) {
 			drink(waterTarget);
 			return;
 		}
 
 		var dx = waterTarget.x - x;
 		var dy = waterTarget.y - y;
-		var ang = Math.atan2(dy, dx);
 
 		velocity.set(wanderSpeed, 0);
-		velocity.rotateByRadians(ang);
+		velocity.rotateByRadians(Math.atan2(dy, dx));
 	}
 
 	function checkForCloserWater() {
 		if (waterTarget == null)
 			return;
 
-		var currentDist = FlxMath.distanceBetween(this, waterTarget);
+		var currentDist = dist(this, waterTarget);
 		var nearest:Pond = null;
 		var nearestDist:Float = currentDist;
 
@@ -708,7 +705,7 @@ class Animal extends FlxSprite {
 			if (p == null || !p.alive || p == waterTarget)
 				continue;
 
-			var d = FlxMath.distanceBetween(this, p);
+			var d = dist(this, p);
 			if (d < nearestDist) {
 				nearestDist = d;
 				nearest = p;
@@ -747,7 +744,7 @@ class Animal extends FlxSprite {
 		wander();
 	}
 
-	function rebound() {
+	inline function rebound() {
 		hunger = FlxMath.bound(hunger, 0, 100);
 		thirst = FlxMath.bound(thirst, 0, 100);
 		mate_level = FlxMath.bound(mate_level, 0, 100);
