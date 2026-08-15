@@ -84,6 +84,7 @@ class Animal extends FlxSprite {
 
 	var pendingPriority:Priority = NOTHING;
 	var priorityChangeTimer:Float = 0;
+	var speciesScale:Float = 1;
 
 	static inline var BASE_REACTION_TIME:Float = .5;
 	static inline var FLEE_MIN_DURATION:Float = 1.0;
@@ -140,7 +141,7 @@ class Animal extends FlxSprite {
 			age += dt * .2;
 
 			var growth = FlxMath.bound(age / ADULT_AGE, 0, 1);
-			var targetScale = BABY_SCALE + (genes.sizeMult - BABY_SCALE) * growth;
+			var targetScale = (BABY_SCALE + (genes.sizeMult - BABY_SCALE) * growth) * speciesScale;
 			scale.set(targetScale, targetScale);
 			
 			hitboxUpdate += dt;
@@ -151,7 +152,7 @@ class Animal extends FlxSprite {
 
 			if (age >= ADULT_AGE) {
 				isAdult = true;
-				scale.set(genes.sizeMult, genes.sizeMult);
+				scale.set(genes.sizeMult * speciesScale, genes.sizeMult * speciesScale);
 				updateHitbox();
 			}
 		}
@@ -294,6 +295,28 @@ class Animal extends FlxSprite {
 
 		priorityChangeTimer -= dt;
 		if (priorityChangeTimer <= 0) priority = desired;
+	}
+
+	function findNearestEdible<T:FlxSprite>(members:Array<T>, exclude:T = null):T {
+		var nearest:T = null;
+		var sightRange = BASE_SIGHT_RANGE * genes.sightRangeMult;
+		var nearestDist:Float = sightRange;
+
+		for (m in members) {
+			if (m == null || !m.alive || m == exclude)
+				continue;
+
+			var edible = cast(m, IEdible);
+			if (!edible.isEdible)
+				continue;
+
+			if (dist(this, m) < nearestDist) {
+				nearestDist = dist(this, m);
+				nearest = m;
+			}
+		}
+
+		return nearest;
 	}
 
 	function pursueFlee(dt:Float) {
@@ -541,21 +564,7 @@ class Animal extends FlxSprite {
 
 	function seekFood() {
 		searchingForFood = true;
-
-		var nearest:Plant = null;
-		var sightRange = BASE_SIGHT_RANGE * genes.sightRangeMult;
-		var nearestDist:Float = sightRange;
-
-		for (p in Game.plants.members) {
-			if (p == null || !p.alive || !p.isRipe)
-				continue;
-
-			var d = dist(this, p);
-			if (d < nearestDist) {
-				nearestDist = d;
-				nearest = p;
-			}
-		}
+		var nearest = findNearestEdible(Game.plants.members);
 
 		if (nearest != null) {
 			foodTarget = nearest;

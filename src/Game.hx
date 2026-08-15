@@ -35,6 +35,7 @@ class Game extends FlxState
 	public static var animals:FlxTypedGroup<Animal>;
 	public static var plants:FlxTypedGroup<Plant>;
 	public static var ponds:FlxTypedGroup<Pond>;
+	public static var trees:FlxTypedGroup<Tree>;
 
 	var selectedAnimal:Animal;
 
@@ -157,6 +158,15 @@ class Game extends FlxState
 			var plant = new Plant(FlxG.random.float(-2000, 2000), FlxG.random.float(-2000, 2000));
 			plant.camera = gameCamera;
 			plants.add(plant);
+		}
+
+		trees = new FlxTypedGroup<Tree>();
+		add(trees);
+
+		for (i in 0...Std.int(plantAmount / 2)) {
+			var tree = new Tree(FlxG.random.float(-1500, 1500), FlxG.random.float(-1500, 1500));
+			tree.camera = gameCamera;
+			trees.add(tree);
 		}
 
 		animalCText = new FlxText(10, 10, 0, "", 24);

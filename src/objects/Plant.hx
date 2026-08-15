@@ -1,9 +1,10 @@
 package objects;
 
 import flixel.FlxG;
+import objects.IEdible;
 
 @:publicFields
-class Plant extends FlxSprite {
+class Plant extends FlxSprite implements IEdible {
     var isGrowing:Bool = true;
     /**
      * 0 -> 20 | Inedible
@@ -17,13 +18,17 @@ class Plant extends FlxSprite {
     static inline var RIPE_MAX:Float = 75;
 	static inline var SPREAD_RADIUS:Float = 60;
     var isRipe(get, never):Bool;
+    var wasRipe:Bool = false;
+    var isEdible(get, never):Bool;
+
+    function get_isEdible():Bool return isRipe;
+	function get_isRipe():Bool   return lifeSpan >= RIPE_MIN && lifeSpan <= RIPE_MAX;
 
     function new(x:Float, y:Float) {
         super(x, y);
-
 		growthRate = FlxG.random.float(0.2, 2.3);
-
         loadGraphic('res/plant.png');
+        wasRipe = false;
     }
 
     override function update(dt:Float) {
@@ -34,17 +39,12 @@ class Plant extends FlxSprite {
             kill();
         }
 
-        if (isRipe) {
-            loadGraphic('res/plant.png');
-        } else {
-            loadGraphic('res/plant!Ripe.png');
+        if (isRipe != wasRipe) {
+            wasRipe = isRipe;
+            loadGraphic('res/${isRipe ? 'plant' : 'plant-unripe'}.png');
         }
 
         super.update(dt);
-    }
-
-    function get_isRipe():Bool {
-        return lifeSpan >= RIPE_MIN && lifeSpan <= RIPE_MAX;
     }
 
     function getEaten():Float {
