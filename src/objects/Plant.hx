@@ -26,9 +26,9 @@ class Plant extends FlxSprite implements IEdible {
 
     function new(x:Float, y:Float) {
         super(x, y);
-		growthRate = FlxG.random.float(0.2, 2.3);
-        loadGraphic('res/plant.png');
-        wasRipe = false;
+		growthRate = FlxG.random.float(0.2, 5.2);
+        wasRipe = isRipe;
+		loadGraphic('res/${isRipe ? 'plant' : 'plant-unripe'}.png');
     }
 
     override function update(dt:Float) {
