@@ -5,10 +5,6 @@ import flixel.math.FlxMath;
 import objects.*;
 import objects.Animal.Genes;
 
-/**
- * TODO:
- *          Implement trees and the apple function (Apple on tree -> horse eats apple off tree -> apple not on tree -> apple regenerates)
- */
 class Horse extends Animal {
     var targetTree:Tree;
     var treeTimer:Float = 0;
